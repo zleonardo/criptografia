@@ -21,44 +21,83 @@ void printBinaryValue(char byte)
 	{
 		printf("%d", !!((byte << j) & 0x80));
 	}
+	printf("\n");
+}
+
+char createAndReverseByte(char bytes[], int position)
+{
+	char byte = 0x00;
+	int place = 8 - position;
+	for (int i = 0; i < 8; i++)
+	{
+		char aux = (((getSpecificBitsFromByte(position, bytes[i])) >> place - i) | (getSpecificBitsFromByte(position, bytes[i])) << (position-i));
+		printf("\naux: %d ", (place));
+		printBinaryValue(aux);
+
+		byte += aux;
+		printf("\n\nbyte: ");
+		printBinaryValue(getSpecificBitsFromByte(position, bytes[i]));
+	}
+
+	printf("\n\nbytes: ");
+	printBinaryValue(byte);
+
+	return reverse(byte);
 }
 
 char *createTable(char plainText[8])
 {
+	char *table = malloc(sizeof(char) * 8);
+	char temp;
+
+	plainText[4] = plainText[0];
+
+	int odd = 0;
+	int even = 4;
 
 	for (int i = 0; i < 8; i++)
 	{
-		printf("original\n");
-		printBinaryValue(plainText[i]);
-
-		plainText[i] = reverse(plainText[i]);
-
-		printf("\nreversed\n");
-		printBinaryValue(plainText[i]);
-
-		printf("\nfirst bit\n");
-		printBinaryValue(getSpecificBitsFromByte(1, plainText[i]));
-
-		printf("\n\n\n");
+		if (i % 2 == 0)
+		{
+			table[even] = createAndReverseByte(plainText, i);
+			even++;
+		}
+		else
+		{
+			table[odd] = createAndReverseByte(plainText, i);
+			odd++;
+		}
 	}
 
-	return plainText;
+	return table;
 }
 
 int main()
 {
 
 	char plainText[8], output[9];
-	plainText[0] = 'A';
-	plainText[1] = 'B';
-	plainText[2] = 'C';
-	plainText[3] = 'D';
-	plainText[4] = 'E';
-	plainText[5] = 'F';
-	plainText[6] = 'G';
-	plainText[7] = 'H';
+	plainText[0] = 0x67;
+	plainText[1] = 0x5a;
+	plainText[2] = 0x69;
+	plainText[3] = 0x67;
+	plainText[4] = 0x5e;
+	plainText[5] = 0x5a;
+	plainText[6] = 0x6b;
+	plainText[7] = 0x5a;
 
-	createTable(plainText);
+	for (int i = 0; i < 8; i++)
+	{
+		printBinaryValue(plainText[i]);
+	}
+
+	printf("\n\n");
+	char response[8];
+	memcpy(response, createTable(plainText), 8);
+
+	for (int i = 0; i < 8; i++)
+	{
+		printBinaryValue(response[i]);
+	}
 
 	//Leitura da entrada
 
