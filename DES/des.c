@@ -10,11 +10,6 @@ char reverse(char b)
 	return b;
 }
 
-char getSpecificBitsFromByte(int bitDesired, char byte)
-{
-	return (byte & (0x80 >> bitDesired));
-}
-
 void printBinaryValue(char byte)
 {
 	for (int j = 0; j < 8; j++)
@@ -24,19 +19,24 @@ void printBinaryValue(char byte)
 	printf("\n");
 }
 
+char getSpecificBitsFromByte(int bitDesired, char byte)
+{
+	printf("byte to get\n");
+	printBinaryValue(byte);
+	return (byte & (0x80 >> bitDesired));
+}
+
 char createAndReverseByte(char bytes[], int position)
 {
 	char byte = 0x00;
 	int place = 8 - position;
 	for (int i = 0; i < 8; i++)
 	{
-		char aux = (((getSpecificBitsFromByte(position, bytes[i])) >> place - i) | (getSpecificBitsFromByte(position, bytes[i])) << (position-i));
-		printf("\naux: %d ", (place));
+		char aux = (((getSpecificBitsFromByte(position, bytes[i])) >> i - position) | (getSpecificBitsFromByte(position, bytes[i])) << (position-i));
+		printf("\naux: %d %d %d", (place), i, position);
 		printBinaryValue(aux);
 
-		byte += aux;
-		printf("\n\nbyte: ");
-		printBinaryValue(getSpecificBitsFromByte(position, bytes[i]));
+		byte |= aux;
 	}
 
 	printf("\n\nbytes: ");
@@ -49,11 +49,18 @@ char *createTable(char plainText[8])
 {
 	char *table = malloc(sizeof(char) * 8);
 	char temp;
-
-	plainText[4] = plainText[0];
-
+	
 	int odd = 0;
 	int even = 4;
+
+	printf("\nplainText: \n");
+
+	for (int i = 0; i < 8; i++)
+	{
+		printBinaryValue(plainText[i]);
+	}
+	
+	printf("\n\n");
 
 	for (int i = 0; i < 8; i++)
 	{
