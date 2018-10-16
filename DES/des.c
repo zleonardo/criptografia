@@ -13,6 +13,17 @@ static int expansionTable[48] = {
     28, 29, 30, 31, 32,  1
 }; 
 
+static char P[] = {
+    16,  7, 20, 21, 
+    29, 12, 28, 17, 
+     1, 15, 23, 26, 
+     5, 18, 31, 10, 
+     2,  8, 24, 14, 
+    32, 27,  3,  9, 
+    19, 13, 30,  6, 
+    22, 11,  4, 25
+};
+
 static char S[8][64] = {{
     /* S1 */
     14,  4, 13,  1,  2, 15, 11,  8,  3, 10,  6, 12,  5,  9,  0,  7,  
@@ -196,20 +207,9 @@ unsigned char *substitutionChoice(unsigned char bytes[6]) {
 
 	char byteCreated;
 
-	printf("\nbytes sbox\n");
-	for(int i = 0; i < 6; i++) {
-		printBinaryValue(bytes[i]);
-	}
-
 	unsigned char *sboxCreated = malloc(sizeof(unsigned char)*8);
 
 	sboxCreated = createSBox(bytes);
-
-	printf("\nbytes sbox\n");
-	for(int i = 0; i < 8; i++) {
-		printBinaryValue(sboxCreated[i]);
-	}
-
 
 	for(int i = 0; i < 8; i++) {
 
@@ -220,13 +220,10 @@ unsigned char *substitutionChoice(unsigned char bytes[6]) {
 
 		int index = (row  * 16) +  (column);
 		int sbox = i%8 + 1;
-		printf("\nrow %d \ncolumn:%d\n", row, column);
 
 		if(i % 2 == 0) {
-			printf("\ns %d\nvalue %d \nindex:%d\n", sbox, (S[i%8][index]), index);
 			byteCreated = (S[i%8][index] << 4);
 		} else {
-			printf("\ns %d\nvalue %d \nindex:%d\n", sbox, (S[i%8][index]), index);
 			byteCreated |= S[i%8][index];
 			sboxTable[i/2] = byteCreated;
 			printBinaryValue(byteCreated);
@@ -238,6 +235,28 @@ unsigned char *substitutionChoice(unsigned char bytes[6]) {
 	return sboxTable;
 }
 
+char *permutation(char bytes[4]) {
+
+	char *permutatedBytes = malloc(sizeof(char) * 4);
+
+	for(int i = 0; i < 32;) {
+		char byteCreated = 0x00;
+		for(int j = 0;j < 8; j++, i++) {
+			int index = i;
+			
+			
+			int byte = (P[index] - 1) / 8;
+			int bit = ((P[index] - 1) % 8) ;
+
+			byteCreated |= getAndMoveByte(bit, j, bytes[byte]);
+		}
+		printBinaryValue(byteCreated);
+		permutatedBytes[(i/8) - 1] = byteCreated;
+	}
+
+	return permutatedBytes;
+}
+
 unsigned char *createTable(unsigned char plainText[8])
 {
 	unsigned char *table = malloc(sizeof(unsigned char) * 8);
@@ -245,15 +264,6 @@ unsigned char *createTable(unsigned char plainText[8])
 
 	int odd = 0;
 	int even = 4;
-
-	printf("\nplainText: \n");
-
-	for (int i = 0; i < 8; i++)
-	{
-		printBinaryValue(plainText[i]);
-	}
-	
-	printf("\n\n");
 
 	for (int i = 0; i < 8; i++)
 	{
@@ -356,6 +366,17 @@ int main()
 	printf("\n\nsboxTable");
 	for(int i = 0; i < 4; i++) {
 		printf("\n%02x", sboxTable[i]);
+	}
+	printf("\n\n");	
+
+	//permutated
+	unsigned char *permutated;
+
+	permutated = permutation(sboxTable);
+
+	printf("\n\npermutated");
+	for(int i = 0; i < 4; i++) {
+		printf("\n%02x", permutated[i]);
 	}
 	printf("\n\n");	
 	//Swap
