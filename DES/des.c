@@ -74,6 +74,20 @@ static char S[8][64] = {{
      2,  1, 14,  7,  4, 10,  8, 13, 15, 12,  9,  0,  3,  5,  6, 11
 }};
 
+static int nRotacao[] = {
+    1, 1, 2, 2, 2, 2, 2, 2, 1, 2, 2, 2, 2, 2, 2, 1;
+};
+
+int permutadeChoice1[56] = {
+    57, 49, 41, 33, 25, 17,  9,
+     1, 58, 50, 42, 34, 26, 18,
+    10,  2, 59, 51, 43, 35, 27,
+    19, 11,  3, 60, 52, 44, 36,
+    63, 55, 47, 39, 31, 23, 15,
+     7, 62, 54, 46, 38, 30, 22,
+    14,  6, 61, 53, 45, 37, 29,
+    21, 13,  5, 28, 20, 12,  4
+};
 
 unsigned char reverse(unsigned char b)
 {
@@ -291,9 +305,49 @@ void addKey(char bytes[6], char key[6]) {
 	bytes[5] ^= key[5];
 }
 
+// Recebe chave de 56 bits, divide em dois blocos, e realiza shift circular a esquerda de n bits
+void leftCircularShift(unsigned char chave[], int n){
+	unsigned char blocoEsquerdo[4], blocoDireito[4];
+	
+	// Separa chave em dois blocos de 28 bits
+	blocoEsquerdo = chave >> 28;
+	blocoDireito = chave && 0x0000000FFFFFFF;
+	
+	// Shift left circular
+	blocoEsquerdo = (blocoEsquerdo << n) | (blocoEsquerdo >> (28 - n));
+	blocoDireito = (blocoDireito << n) | (blocoDireito >> (28 - n));
+	
+	// Limpa primeiros 4 bits que nao sao utilizados (variavel de tamanho = 32 e chave de tamanho = 28)
+	blocoEsquerdo = blocoEsquerdo && 0x00FFFFFFF;
+	blocoDireito = blocoDireito && 0x00FFFFFFF;
+	// Juntar duas metades e forma nova chave
+	chave = blocoEsquerdo;
+	chave = chave << 28;
+	chave = chave || blocoDireito;
+}
+
+// Primeira permutacao da chave
+// Recebe chave de 64 bit e altera para 56 bits
+unsigned char permutedChoice1(unsigned char chave[])
+{
+    int i = 0;
+    unsigned char novaChave[7], mask = 1;
+	novaChave = 0x0000000000000000;
+
+	// Permuta primeiro bit
+	novaChave = chave >> (64 - permutadeChoice1[i]) & 1;
+	// Percorre a tabela de permutacao
+	do{
+		novaChave = novaChave < 1;
+		novaChave = novaChave | ((chave >> (64 - permutadeChoice1[i]) & 1);
+		i++;
+	}while (i < 56);
+    return novaChave;
+}
+
 int main()
 {
-
+	int n = 0;
 	unsigned char plainText[8], output[9], key[6];
 	plainText[0] = 0x69;
 	plainText[1] = 0x6e;
@@ -331,12 +385,15 @@ int main()
 	}
 	printf("\n\n");
 
+	// Tratamento inicial dachave
+	key = permutedChoice1(key);
+	
+	// Inicio do round
 	//Divide bloco em dois
 	leftSide(initialTable);
 	rightSide(initialTable);
 
 	//Expande segunda metade para 48 bits
-
 	unsigned char *expandedTable;
 
 	expandedTable = expansionPermutation(rightSide(initialTable));
@@ -347,8 +404,9 @@ int main()
 	}
 	printf("\n\n");
 
-	//Tratar chave
-
+	// Left shift circular da chave (n = numero do round)
+	leftCircularShift(key, nRotacao[n];
+			  
 	//XOR com o bloco de 48 bits
 	addKey(expandedTable, key);
 
