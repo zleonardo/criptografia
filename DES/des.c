@@ -75,10 +75,10 @@ static char S[8][64] = {{
 }};
 
 static int nRotacao[] = {
-    1, 1, 2, 2, 2, 2, 2, 2, 1, 2, 2, 2, 2, 2, 2, 1;
+    1, 1, 2, 2, 2, 2, 2, 2, 1, 2, 2, 2, 2, 2, 2, 1
 };
 
-int permutadeChoice1[56] = {
+int permutadeChoice1Table[56] = {
     57, 49, 41, 33, 25, 17,  9,
      1, 58, 50, 42, 34, 26, 18,
     10,  2, 59, 51, 43, 35, 27,
@@ -87,6 +87,15 @@ int permutadeChoice1[56] = {
      7, 62, 54, 46, 38, 30, 22,
     14,  6, 61, 53, 45, 37, 29,
     21, 13,  5, 28, 20, 12,  4
+};
+
+int permutadeChoice2Table[48] = {
+    14, 17, 11, 24,  1,  5,  3, 28,
+    15,  6, 21, 10, 23, 19, 12,  4,
+    26,  8, 16,  7, 27, 20, 13,  2,
+    41, 52, 31, 37, 47, 55, 30, 40,
+    51, 45, 33, 48, 44, 49, 39, 56,
+    34, 53, 46, 42, 50, 36, 29, 32
 };
 
 unsigned char reverse(unsigned char b)
@@ -106,7 +115,7 @@ void printBinaryValue(unsigned char byte)
 	printf("\n");
 }
 
-unsigned char* leftSide(unsigned char table[]) {
+unsigned char* getLeftSide(unsigned char table[]) {
 	unsigned char *leftSide = malloc(sizeof(unsigned char) * 4);
 
 	leftSide[0] = table[0];
@@ -117,7 +126,7 @@ unsigned char* leftSide(unsigned char table[]) {
 	return leftSide;
 }
 
-unsigned char* rightSide(unsigned char table[]) {
+unsigned char* getRightSide(unsigned char table[]) {
 	unsigned char *rightSide = malloc(sizeof(unsigned char) * 4);
 
 	rightSide[0] = table[4];
@@ -240,7 +249,6 @@ unsigned char *substitutionChoice(unsigned char bytes[6]) {
 		} else {
 			byteCreated |= S[i%8][index];
 			sboxTable[i/2] = byteCreated;
-			printBinaryValue(byteCreated);
 			byteCreated = 0x00;
 		}
 
@@ -264,7 +272,6 @@ char *permutation(char bytes[4]) {
 
 			byteCreated |= getAndMoveByte(bit, j, bytes[byte]);
 		}
-		printBinaryValue(byteCreated);
 		permutatedBytes[(i/8) - 1] = byteCreated;
 	}
 
@@ -296,59 +303,116 @@ unsigned char *createTable(unsigned char plainText[8])
 	return table;
 }
 
-void addKey(char bytes[6], char key[6]) {
-	bytes[0] ^= key[0];
-	bytes[1] ^= key[1];
-	bytes[2] ^= key[2];
-	bytes[3] ^= key[3];
-	bytes[4] ^= key[4];
-	bytes[5] ^= key[5];
+void xor(char bytes[], char key[], int tam) {
+	for (int i = 0; i < tam; i++){
+		bytes[i] ^= key[i];
+	}
 }
 
 // Recebe chave de 56 bits, divide em dois blocos, e realiza shift circular a esquerda de n bits
 void leftCircularShift(unsigned char chave[], int n){
-	unsigned char blocoEsquerdo[4], blocoDireito[4];
+	unsigned char blocoEsquerdo[4], blocoDireito[4], primeirobit;
 	
 	// Separa chave em dois blocos de 28 bits
-	blocoEsquerdo = chave >> 28;
-	blocoDireito = chave && 0x0000000FFFFFFF;
-	
+	blocoEsquerdo[0] = chave[0];
+	blocoEsquerdo[1] = chave[1];
+	blocoEsquerdo[2] = chave[2];
+	blocoEsquerdo[3] = chave[3] & 0xf0;
+	blocoDireito[0] = chave[3] & 0x0f;
+	blocoDireito[1] = chave[4];
+	blocoDireito[2] = chave[5];
+	blocoDireito[3] = chave[6];
+
 	// Shift left circular
-	blocoEsquerdo = (blocoEsquerdo << n) | (blocoEsquerdo >> (28 - n));
-	blocoDireito = (blocoDireito << n) | (blocoDireito >> (28 - n));
-	
-	// Limpa primeiros 4 bits que nao sao utilizados (variavel de tamanho = 32 e chave de tamanho = 28)
-	blocoEsquerdo = blocoEsquerdo && 0x00FFFFFFF;
-	blocoDireito = blocoDireito && 0x00FFFFFFF;
-	// Juntar duas metades e forma nova chave
-	chave = blocoEsquerdo;
-	chave = chave << 28;
-	chave = chave || blocoDireito;
+	primeirobit = blocoEsquerdo[0] >> 8-n;
+	blocoEsquerdo[0] = (chave[0] << n) | (blocoEsquerdo[1] >> (8-n));
+
+	blocoEsquerdo[1] = (chave[1] << n) | (blocoEsquerdo[2] >> (8-n));
+	blocoEsquerdo[2] = (chave[2] << n) | (blocoEsquerdo[3] >> (8-n));
+	blocoEsquerdo[3] = (chave[3] & 0xF0) << n;
+	blocoEsquerdo[3] = 	blocoEsquerdo[3] | primeirobit << 4;
+
+	primeirobit = blocoDireito[0] >> 4-n;
+	blocoDireito[0] = blocoDireito[0] << n;
+	blocoDireito[0] = blocoDireito[0] | (blocoDireito[1] >> (8-n));
+	blocoDireito[0] = blocoDireito[0] & 0x0F;
+	blocoDireito[1] = (blocoDireito[1] << n) | (blocoDireito[2] >> (8-n));
+	blocoDireito[2] = (blocoDireito[2] << n) | (blocoDireito[3] >> (8-n));
+	blocoDireito[3] = (blocoDireito[3] << n) | primeirobit;
+
+	// Junta as duas metades em uma chave
+	chave[0] = blocoEsquerdo[0];
+	chave[1] = blocoEsquerdo[1];
+	chave[2] = blocoEsquerdo[2];
+	chave[3] = blocoEsquerdo[3] | blocoDireito[0];
+	chave[4] = blocoDireito[1];
+	chave[5] = blocoDireito[2];
+	chave[6] = blocoDireito[3];
+
 }
 
 // Primeira permutacao da chave
 // Recebe chave de 64 bit e altera para 56 bits
-unsigned char permutedChoice1(unsigned char chave[])
+unsigned char* permutedChoice1(unsigned char chave[])
 {
     int i = 0;
-    unsigned char novaChave[7], mask = 1;
-	novaChave = 0x0000000000000000;
+    unsigned char *novaChave = malloc(sizeof(unsigned char)*7);
+	
+	for(int i = 0; i < 56;) {
+		char byteCreated = 0x00;
+		for(int j = 0;j < 8; j++, i++) {
+			int index = i;
+			
+			
+			int byte = (permutadeChoice1Table[index] - 1) / 8;
+			int bit = ((permutadeChoice1Table[index] - 1) % 8) ;
 
-	// Permuta primeiro bit
-	novaChave = chave >> (64 - permutadeChoice1[i]) & 1;
-	// Percorre a tabela de permutacao
-	do{
-		novaChave = novaChave < 1;
-		novaChave = novaChave | ((chave >> (64 - permutadeChoice1[i]) & 1);
-		i++;
-	}while (i < 56);
+			byteCreated |= getAndMoveByte(bit, j, chave[byte]);
+		}
+		novaChave[(i/8) - 1] = byteCreated;
+	}
+
     return novaChave;
+}
+
+// Primeira permutacao da chave
+// Recebe chave de 64 bit e altera para 56 bits
+unsigned char* permutedChoice2(unsigned char chave[])
+{
+    int i = 0;
+    unsigned char *novaChave = malloc(sizeof(unsigned char)*6);
+	
+	for(int i = 0; i < 48;){
+		char byteCreated = 0x00;
+		for(int j = 0;j < 8; j++, i++) {
+			int index = i;
+			
+			
+			int byte = (permutadeChoice2Table[index] - 1) / 8;
+			int bit = ((permutadeChoice2Table[index] - 1) % 8) ;
+
+			byteCreated |= getAndMoveByte(bit, j, chave[byte]);
+		}
+
+		novaChave[(i/8) - 1] = byteCreated;
+	}
+
+    return novaChave;
+}
+
+void printHex(unsigned char* texto, int tamanho){
+	for (int i = 0; i < tamanho; i++){
+		printf("%02x ", texto[i]);
+	}
 }
 
 int main()
 {
 	int n = 0;
-	unsigned char plainText[8], output[9], key[6];
+	unsigned char plainText[8], output[9], key[8];
+	unsigned char *leftSide, *rightSide, *chaveDoRound, *sboxTable, *permutated, *expandedTable;
+	unsigned char *initialTable, *keyPC2;
+	
 	plainText[0] = 0x69;
 	plainText[1] = 0x6e;
 	plainText[2] = 0x74;
@@ -358,92 +422,100 @@ int main()
 	plainText[6] = 0x75;
 	plainText[7] = 0x63;
 
-	key[0] = 0x50;
-	key[1] = 0x2c;
-	key[2] = 0xac;
-	key[3] = 0x57;
-	key[4] = 0x2a;
-	key[5] = 0xc2;
+	printf("PLAIN TEXT\n");
+	printHex(plainText, 8);
+	printf("\n");
 
+	key[0] = 0x31;
+	key[1] = 0x32;
+	key[2] = 0x33;
+	key[3] = 0x34;
+	key[4] = 0x35;
+	key[5] = 0x36;
+	key[6] = 0x37;
+	key[7] = 0x38;
 
-	printf("\n\nplaintext");
-	for(int i = 0; i < 8; i++) {
-		printf("\n%02x", plainText[i]);
-	}
-	printf("\n\n");
-
-	//Leitura da entrada
+	printf("CHAVE\n");
+	printHex(key, 8);
+	printf("\n");
 
 	//Monta tabela de entrada
-	unsigned char *initialTable;
-
 	initialTable = createTable(plainText);
-
-	printf("\n\ninitial\n");
-	for(int i = 0; i < 8; i++) {
-		printf("%02x\n", initialTable[i]);
-	}
-	printf("\n\n");
+	printf("IP\n");
+	printHex(initialTable, 8);
+	printf("\n");
 
 	// Tratamento inicial dachave
-	key = permutedChoice1(key);
+	chaveDoRound = permutedChoice1(key);
+	printf("PC - SELECIONA CHAVE\n");
+	printHex(chaveDoRound, 8);
+	printf("\n");
+
+	// Divide bloco de texto
+	rightSide = getRightSide(initialTable);
+	leftSide = getLeftSide(initialTable);
+
+	// Rounds
+	for (int i = 0; i < 16; i++) {
+		
+		// Expansion permutation (tabela e)
+		expandedTable = expansionPermutation(rightSide);
+
+		// Left shift circular da chave
+		leftCircularShift(chaveDoRound, nRotacao[i]);
 	
-	// Inicio do round
-	//Divide bloco em dois
-	leftSide(initialTable);
-	rightSide(initialTable);
+		printf("CHAVE DO ROUND %d\nDeslocamento: ", i+1);
+		printHex(chaveDoRound, 7);
+		printf("\n");
 
-	//Expande segunda metade para 48 bits
-	unsigned char *expandedTable;
+		// Permuted choice 2 da chave
+		keyPC2 = permutedChoice2(chaveDoRound);
+		
+		printf("PC2: ");
+		printHex(keyPC2, 6);
+		printf("\n");
 
-	expandedTable = expansionPermutation(rightSide(initialTable));
+		printf("\nROUND %d\n", i+1);
+		printHex(leftSide, 4);
+		printHex(rightSide, 4);
+		printf("\nExpansao: ");
+		printHex(expandedTable, 6);
 
-	printf("\n\nexpanded");
-	for(int i = 0; i < 6; i++) {
-		printf("\n%02x", expandedTable[i]);
+		//XOR com o bloco de 48 bits
+		xor(expandedTable, keyPC2, 6);
+		printf("\nAddkey: ");
+		printHex(expandedTable, 6);
+		
+		// Substituicao com sbox
+		sboxTable = substitutionChoice(expandedTable);
+		printf("\nS-box: ");
+		printHex(sboxTable, 4);
+
+		// Permutacao p
+		permutated = permutation(sboxTable);
+		printf("\nPermutacao p: ");
+		printHex(permutated, 4);
+
+		// xor com bloco da esquerda
+		xor(permutated, leftSide, 4);
+		printf("\nAdd left: ");
+		printHex(permutated, 4);
+		printf("\n");
+
+		// Atualiza left side
+		leftSide = rightSide;
+
+		rightSide = permutated;
+		printHex(leftSide, 4);
+		printHex(rightSide, 4);
+		printf("\n\n");
 	}
-	printf("\n\n");
 
-	// Left shift circular da chave (n = numero do round)
-	leftCircularShift(key, nRotacao[n];
-			  
-	//XOR com o bloco de 48 bits
-	addKey(expandedTable, key);
-
-	printf("\n\nadded");
-	for(int i = 0; i < 6; i++) {
-		printf("\n%02x", expandedTable[i]);
-	}
-	printf("\n\n");
-
-	//Subistitution choice (usar as tabelas S para montar a saida com 32 bits)
-	unsigned char *sboxTable;
-
-	sboxTable = substitutionChoice(expandedTable);
-
-	printf("\n\nsboxTable");
-	for(int i = 0; i < 4; i++) {
-		printf("\n%02x", sboxTable[i]);
-	}
-	printf("\n\n");	
-
-	//permutated
-	unsigned char *permutated;
-
-	permutated = permutation(sboxTable);
-
-	printf("\n\npermutated");
-	for(int i = 0; i < 4; i++) {
-		printf("\n%02x", permutated[i]);
-	}
-	printf("\n\n");	
 	//Swap
 	//?
 
 	//Inverse initial permutation
 	//?
-
-	//Printar apos cada round
 
 	return 1;
 }
