@@ -98,6 +98,17 @@ int permutadeChoice2Table[48] = {
     34, 53, 46, 42, 50, 36, 29, 32
 };
 
+int finalPermutationTable[64] = {
+    40,  8, 48, 16, 56, 24, 64, 32,
+    39,  7, 47, 15, 55, 23, 63, 31,
+    38,  6, 46, 14, 54, 22, 62, 30,
+    37,  5, 45, 13, 53, 21, 61, 29,
+    36,  4, 44, 12, 52, 20, 60, 28,
+    35,  3, 43, 11, 51, 19, 59, 27,
+    34,  2, 42, 10, 50, 18, 58, 26,
+    33,  1, 41,  9, 49, 17, 57, 25
+};
+
 unsigned char reverse(unsigned char b)
 {
 	b = (b & 0xF0) >> 4 | (b & 0x0F) << 4;
@@ -400,9 +411,47 @@ unsigned char* permutedChoice2(unsigned char chave[])
     return novaChave;
 }
 
+unsigned char* swap(unsigned char left[4], unsigned char right[4]) {
+	unsigned char *swapped = malloc(sizeof(unsigned char)*8);
+
+	swapped[0] = right[0];
+	swapped[1] = right[1];
+	swapped[2] = right[2];
+	swapped[3] = right[3];
+
+	swapped[4] = left[0];
+	swapped[5] = left[1];
+	swapped[6] = left[2];
+	swapped[7] = left[3];
+
+	return swapped;
+}
+
+unsigned char* finalPermutation(unsigned char chave[])
+{
+    int i = 0;
+    unsigned char *text = malloc(sizeof(unsigned char)*8);
+	
+	for(int i = 0; i < 64;){
+		char byteCreated = 0x00;
+		for(int j = 0;j < 8; j++, i++) {
+			int index = i;
+			
+			
+			int byte = (finalPermutationTable[index] - 1) / 8;
+			int bit = ((finalPermutationTable[index] - 1) % 8) ;
+
+			byteCreated |= getAndMoveByte(bit, j, chave[byte]);
+		}
+
+		text[(i/8) - 1] = byteCreated;
+	}
+
+    return text;
+}
 void printHex(unsigned char* texto, int tamanho){
 	for (int i = 0; i < tamanho; i++){
-		printf("%02x ", texto[i]);
+		printf("%02X ", texto[i]);
 	}
 }
 
@@ -411,7 +460,7 @@ int main()
 	int n = 0;
 	unsigned char plainText[8], output[9], key[8];
 	unsigned char *leftSide, *rightSide, *chaveDoRound, *sboxTable, *permutated, *expandedTable;
-	unsigned char *initialTable, *keyPC2;
+	unsigned char *initialTable, *keyPC2, *swapped, *cipheredText;
 	
 	plainText[0] = 0x69;
 	plainText[1] = 0x6e;
@@ -511,11 +560,14 @@ int main()
 		printf("\n\n");
 	}
 
-	//Swap
-	//?
+	swapped = swap(leftSide, rightSide);
+	printf("Swap: ");
+	printHex(swapped, 8);
+	printf("\n\n");
 
-	//Inverse initial permutation
-	//?
+	cipheredText =  finalPermutation(swapped);
+	printf("IP Inverso: ");
+	printHex(cipheredText, 8);
 
 	return 1;
 }
